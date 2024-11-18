@@ -1,0 +1,18 @@
+[
+  {
+    "Id": 1,
+    "Title": "Inventory Management System",
+    "Description": "A system for tracking inventory in real-time.",
+    "TechnologiesUsed": "C#, ASP.NET Core, Entity Framework",
+    "KeyFeatures": "Real-time updates, automated order processing",
+    "Role": "Full-stack developer"
+  },
+  {
+    "Id": 2,
+    "Title": "E-Commerce Website with Blazor",
+    "Description": "An e-commerce platform built with Blazor.",
+    "TechnologiesUsed": "Blazor, .NET Core, REST APIs",
+    "KeyFeatures": "Product catalog, payment processing",
+    "Role": "Front-end developer"
+  }
+]

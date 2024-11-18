@@ -1,0 +1,178 @@
+﻿@page "/blog"
+@inject PortfolioWebsite.Services.BlogService BlogService
+@using PortfolioWebsite.Models
+
+<div class="container mt-5 text-center">
+    <h1 class="display-5 font-weight-bold" style="color: #000;">Welcome to My Tech Insights</h1>
+    <p class="lead" style="color: #000;">
+        Discover my journey, projects, and thoughts on technology and development.
+    </p>
+    <hr style="border-top: 1px solid #ddd; width: 80%; margin: auto;">
+</div>
+
+
+<div class="container mt-5">
+    <!-- Tabs -->
+    <ul class="nav nav-tabs">
+        <li class="nav-item">
+            <a class="nav-link @(activeTab == "all" ? "active" : "")" @onclick="@(() => SetActiveTab("all"))">All Posts</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link @(activeTab == "create" ? "active" : "")" @onclick="@(() => SetActiveTab("create"))">Create Post</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link @(activeTab == "manage" ? "active" : "")" @onclick="@(() => SetActiveTab("manage"))">Manage Posts</a>
+        </li>
+    </ul>
+
+    <!-- Tab Content -->
+    <div class="tab-content mt-4">
+        @if (activeTab == "all")
+        {
+            <div>
+                <h3>All Blog Posts</h3>
+
+                @if (selectedPost == null)
+                {
+                    <!-- Display summary of each blog post -->
+                    @foreach (var post in BlogService.GetAllPosts())
+                    {
+                        <div class="card mb-4 shadow-sm">
+                            <div class="card-body">
+                                <h4 class="card-title">@post.Title</h4>
+                                <p class="text-muted"><em>Posted on @post.CreatedDate.ToString("MMMM dd, yyyy")</em></p>
+                                <p class="card-text">@post.Content.Substring(0, Math.Min(100, post.Content.Length))...</p>
+                                <button @onclick="() => ViewPost(post)" class="btn btn-primary">Read More</button>
+                            </div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <!-- Display full content of the selected blog post -->
+                    <div class="card mb-4 shadow-sm">
+                        <div class="card-body">
+                            <h4 class="card-title">@selectedPost.Title</h4>
+                            <p class="text-muted"><em>Posted on @selectedPost.CreatedDate.ToString("MMMM dd, yyyy")</em></p>
+                            <p class="card-text">@selectedPost.Content</p>
+                            <button @onclick="ClosePost" class="btn btn-secondary">Back to All Posts</button>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else if (activeTab == "create")
+        {
+            <div>
+                <h3>@(isEditing ? "Edit Blog Post" : "Create New Blog Post")</h3>
+                <div class="card p-4 mb-4">
+                    <input @bind="postTitle" placeholder="Title" class="form-control mb-3" />
+                    <textarea @bind="postContent" placeholder="Content" class="form-control mb-3" rows="4"></textarea>
+                    <button @onclick="(isEditing ? UpdatePost : AddPost)" class="btn btn-primary w-100">@((isEditing ? "Update Post" : "Add Post"))</button>
+                    @if (isEditing)
+                    {
+                        <button @onclick="CancelEdit" class="btn btn-secondary w-100 mt-2">Cancel</button>
+                    }
+                </div>
+            </div>
+        }
+        else if (activeTab == "manage")
+        {
+            <div>
+                <h3>Manage Posts</h3>
+                @foreach (var post in BlogService.GetAllPosts())
+                {
+                    <div class="card mb-4 shadow-sm">
+                        <div class="card-body">
+                            <h4 class="card-title">@post.Title</h4>
+                            <button @onclick="() => EditPost(post)" class="btn btn-warning me-2">Edit</button>
+                            <button @onclick="() => DeletePost(post.Id)" class="btn btn-danger">Delete</button>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private string activeTab = "all";
+    private string postTitle;
+    private string postContent;
+    private BlogPost selectedPost;
+    private int editingPostId;
+    private bool isEditing = false;
+
+    private void SetActiveTab(string tab)
+    {
+        activeTab = tab;
+        selectedPost = null; // Reset selected post when switching tabs
+        isEditing = false;    // Reset editing mode when switching tabs
+    }
+
+    private void AddPost()
+    {
+        var newPost = new BlogPost
+            {
+                Title = postTitle,
+                Content = postContent,
+                CreatedDate = DateTime.Now
+            };
+        BlogService.AddPost(newPost);
+        ClearForm();
+        activeTab = "all"; // Switch back to All Posts after adding
+    }
+
+    private void EditPost(BlogPost post)
+    {
+        editingPostId = post.Id;
+        postTitle = post.Title;
+        postContent = post.Content;
+        isEditing = true;
+        activeTab = "create"; // Switch to Create tab in edit mode
+    }
+
+    private void UpdatePost()
+    {
+        var updatedPost = new BlogPost
+            {
+                Id = editingPostId,
+                Title = postTitle,
+                Content = postContent,
+                CreatedDate = DateTime.Now
+            };
+        BlogService.UpdatePost(updatedPost);
+        ClearForm();
+        isEditing = false;
+        activeTab = "manage"; // Switch back to Manage tab after updating
+    }
+
+    private void CancelEdit()
+    {
+        ClearForm();
+        isEditing = false;
+        activeTab = "manage";
+    }
+
+    private void DeletePost(int id)
+    {
+        BlogService.DeletePost(id);
+    }
+
+    private void ViewPost(BlogPost post)
+    {
+        selectedPost = post;
+    }
+
+    private void ClosePost()
+    {
+        selectedPost = null;
+    }
+
+    private void ClearForm()
+    {
+        postTitle = string.Empty;
+        postContent = string.Empty;
+        editingPostId = 0;
+    }
+}

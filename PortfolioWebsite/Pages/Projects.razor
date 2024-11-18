@@ -1,0 +1,204 @@
+﻿@page "/projects"
+@inject PortfolioWebsite.Services.ProjectService ProjectService
+@using PortfolioWebsite.Models
+
+<!-- Message Section -->
+@if (!string.IsNullOrEmpty(statusMessage))
+{
+    <div class="alert @(isError ? "alert-danger" : "alert-success")" role="alert">
+        @statusMessage
+    </div>
+}
+
+<div class="container mt-5 text-center" style="background-color: #f9f9f9; color: #333333;">
+    <h1 class="display-5 font-weight-bold" style="color: #2c3e50;">Building Digital Solutions</h1>
+    <p class="lead" style="color: #555555;">
+        Explore my projects and contributions across various fields and technologies.
+    </p>
+    <hr style="border-top: 1px solid #ddd; width: 80%; margin: auto;">
+</div>
+
+
+<div class="container mt-5">
+    <!-- Tabs -->
+    <ul class="nav nav-tabs">
+        <li class="nav-item">
+            <a class="nav-link @(activeTab == "all" ? "active" : "")" @onclick="@(() => SetActiveTab("all"))">All Projects</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link @(activeTab == "insert" ? "active" : "")" @onclick="@(() => SetActiveTab("insert"))">Insert New Project</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link @(activeTab == "manage" ? "active" : "")" @onclick="@(() => SetActiveTab("manage"))">Manage Projects</a>
+        </li>
+    </ul>
+
+    <!-- Tab Content -->
+    <div class="tab-content mt-4">
+        @if (activeTab == "all")
+        {
+            <div>
+                <h3>All Projects</h3>
+                @foreach (var project in projects)
+                {
+                    <div class="card mb-4 shadow-sm">
+                        <div class="card-body">
+                            <h4 class="card-title">@project.Title</h4>
+                            <p class="text-muted"><em>@project.Description</em></p>
+                            <ul>
+                                <li><strong>Technologies Used:</strong> @project.TechnologiesUsed</li>
+                                <li><strong>Key Features:</strong> @project.KeyFeatures</li>
+                                <li><strong>My Role:</strong> @project.Role</li>
+                            </ul>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else if (activeTab == "insert")
+        {
+            <div>
+                <h3>@(isEditing ? "Edit Project" : "Insert New Project")</h3>
+                <div class="card p-4 mb-4">
+                    <input @bind="projectTitle" placeholder="Project Title" class="form-control mb-3" />
+                    <textarea @bind="projectDescription" placeholder="Description" class="form-control mb-3" rows="4"></textarea>
+                    <input @bind="projectTechnologies" placeholder="Technologies Used" class="form-control mb-3" />
+                    <input @bind="projectKeyFeatures" placeholder="Key Features" class="form-control mb-3" />
+                    <input @bind="projectRole" placeholder="My Role" class="form-control mb-3" />
+                    <button @onclick="AddProject" class="btn btn-primary w-100">Add Project</button>
+                </div>
+            </div>
+        }
+        else if (activeTab == "manage")
+        {
+            <div>
+                <h3>Manage Projects</h3>
+                @foreach (var project in projects)
+                {
+                    <div class="card mb-4 shadow-sm">
+                        <div class="card-body">
+                            <h4 class="card-title">@project.Title</h4>
+                            <button @onclick="() => EditProject(project)" class="btn btn-warning me-2">Edit</button>
+                            <button @onclick="() => DeleteProject(project.Id)" class="btn btn-danger">Delete</button>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private List<Project> projects = new();
+    private string activeTab = "all";
+    private string projectTitle;
+    private string projectDescription;
+    private string projectTechnologies;
+    private string projectKeyFeatures;
+    private string projectRole;
+    private int editingProjectId;
+    private bool isEditing = false;
+    private string statusMessage; // For displaying status messages
+    private bool isError;         // Indicates if the message is an error
+
+    protected override async Task OnInitializedAsync()
+    {
+        projects = await ProjectService.GetAllProjectsAsync();
+    }
+
+    private void SetActiveTab(string tab)
+    {
+        activeTab = tab;
+        isEditing = false;
+        ClearForm();
+    }
+
+    private async Task AddProject()
+    {
+        var newProject = new Project
+            {
+                Title = projectTitle,
+                Description = projectDescription,
+                TechnologiesUsed = projectTechnologies,
+                KeyFeatures = projectKeyFeatures,
+                Role = projectRole
+            };
+        // Validate title
+        if (string.IsNullOrWhiteSpace(newProject.Title))
+        {
+            statusMessage = "Project title is required and cannot be empty.";
+            isError = true;
+            return; // Exit without making an API call
+        }
+        try
+        {
+            // Add the project via the service
+            await ProjectService.AddProjectAsync(newProject);
+
+            // Refresh the list of projects
+            projects = await ProjectService.GetAllProjectsAsync();
+
+            // Set success message
+            statusMessage = "Project added successfully!";
+            isError = false;
+
+            // Clear the form
+            ClearForm();
+
+            // Switch to "All Projects" tab
+            activeTab = "all";
+        }
+        catch (Exception ex)
+        {
+            // Handle errors during the API call
+            statusMessage = $"Failed to add project: {ex.Message}";
+            isError = true;
+        }
+    
+}
+
+    private void EditProject(Project project)
+    {
+        editingProjectId = project.Id;
+        projectTitle = project.Title;
+        projectDescription = project.Description;
+        projectTechnologies = project.TechnologiesUsed;
+        projectKeyFeatures = project.KeyFeatures;
+        projectRole = project.Role;
+        isEditing = true;
+        activeTab = "insert";
+    }
+
+    private async Task UpdateProject()
+    {
+        var updatedProject = new Project
+            {
+                Id = editingProjectId,
+                Title = projectTitle,
+                Description = projectDescription,
+                TechnologiesUsed = projectTechnologies,
+                KeyFeatures = projectKeyFeatures,
+                Role = projectRole
+            };
+        await ProjectService.UpdateProjectAsync(updatedProject);
+        projects = await ProjectService.GetAllProjectsAsync();
+        ClearForm();
+        isEditing = false;
+        activeTab = "manage";
+    }
+
+    private async Task DeleteProject(int id)
+    {
+        await ProjectService.DeleteProjectAsync(id);
+        projects = await ProjectService.GetAllProjectsAsync();
+    }
+
+    private void ClearForm()
+    {
+        projectTitle = string.Empty;
+        projectDescription = string.Empty;
+        projectTechnologies = string.Empty;
+        projectKeyFeatures = string.Empty;
+        projectRole = string.Empty;
+    }
+}
